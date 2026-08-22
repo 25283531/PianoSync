@@ -18,7 +18,9 @@ val keystoreProps = Properties().apply {
 fun keystoreValue(env: String, prop: String): String? =
     System.getenv(env) ?: keystoreProps.getProperty(prop)
 
-val releaseStoreFile = keystoreValue("KEYSTORE_FILE", "storeFile")
+val releaseStoreFile = keystoreValue("KEYSTORE_FILE", "storeFile")?.takeIf { it.isNotBlank() }
+
+fun hasReleaseKeystore(): Boolean = releaseStoreFile != null
 
 android {
     namespace = "io.pianosync.midi"
@@ -36,8 +38,8 @@ android {
 
     signingConfigs {
         create("release") {
-            if (releaseStoreFile != null) {
-                storeFile = file(releaseStoreFile)
+            if (hasReleaseKeystore()) {
+                storeFile = file(releaseStoreFile!!)
                 storePassword = keystoreValue("KEYSTORE_STORE_PASSWORD", "storePassword")
                 keyAlias = keystoreValue("KEYSTORE_KEY_ALIAS", "keyAlias")
                 keyPassword = keystoreValue("KEYSTORE_KEY_PASSWORD", "keyPassword")
@@ -53,7 +55,7 @@ android {
                 "proguard-rules.pro"
             )
             // 配置了生产密钥则用 release 签名，否则回退 debug 签名以产出可安装 APK
-            signingConfig = if (releaseStoreFile != null) {
+            signingConfig = if (hasReleaseKeystore()) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
