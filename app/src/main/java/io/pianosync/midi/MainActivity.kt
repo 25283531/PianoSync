@@ -68,8 +68,13 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(
                         navController = navController,
-                        startDestination = "home"
+                        startDestination = "demo" // === DEMO: 临时启动到五线谱演示页，看完改回 "home" ===
                     ) {
+                        // === DEMO 路由：五线谱滚动 + 红色高亮效果预览，看完可删除 ===
+                        composable("demo") {
+                            io.pianosync.midi.ui.screens.player.StaffNotationDemo()
+                        }
+
                         composable("home") {
                             HomeScreen(
                                 onNavigateToPlayer = { midiFile ->
