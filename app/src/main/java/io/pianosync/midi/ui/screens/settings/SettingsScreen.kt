@@ -92,6 +92,26 @@ fun SettingsScreen(
                         )
                     }
                 )
+
+                // Solfege (1 2 3) labels toggle
+                SettingsItem(
+                    icon = Icons.Default.MusicNote,
+                    title = stringResource(R.string.show_solfege_labels),
+                    subtitle = if (settings.showSolfegeLabels)
+                        stringResource(R.string.solfege_labels_shown)
+                    else
+                        stringResource(R.string.solfege_labels_hidden),
+                    trailing = {
+                        Switch(
+                            checked = settings.showSolfegeLabels,
+                            onCheckedChange = { enabled ->
+                                scope.launch {
+                                    settingsRepository.updateShowSolfegeLabels(enabled)
+                                }
+                            }
+                        )
+                    }
+                )
             }
 
             // Audio Settings Section

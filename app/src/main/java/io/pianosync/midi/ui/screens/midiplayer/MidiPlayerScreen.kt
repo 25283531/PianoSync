@@ -52,6 +52,8 @@ import io.pianosync.midi.data.model.AppSettings
 import io.pianosync.midi.data.model.DifficultyLevel
 import io.pianosync.midi.ui.screens.player.components.LoopControl
 import io.pianosync.midi.ui.screens.player.components.MetronomeVisualizer
+import io.pianosync.midi.ui.screens.player.components.StaffNotationView
+import io.pianosync.midi.util.MusicTheory
 import io.pianosync.midi.ui.theme.AccentRose
 import io.pianosync.midi.ui.theme.RoyalPurple40
 import io.pianosync.midi.ui.theme.WarmGold60
@@ -1004,6 +1006,26 @@ fun MidiPlayerScreen(
                 }
             }
 
+            // 顶部五线谱识谱视窗（当前弹奏音符红色/蓝色高亮，随播放横向滚动）
+            if (!isPreLoading && midiNotes.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .background(MaterialTheme.colorScheme.background)
+                ) {
+                    StaffNotationView(
+                        notes = midiNotes,
+                        currentTimeMs = currentTimeMs,
+                        activeNotes = activeNotes,
+                        bpm = currentBpm ?: 120,
+                        originalBpm = midiFile.originalBpm ?: 120,
+                        handMode = currentHandMode,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1598,6 +1620,7 @@ fun MidiPlayerScreen(
                     currentNotes = activeNotes,
                     syncedNotes = emptySet(),
                     showKeyNames = settings.difficultyLevel.showKeyNames && settings.showKeyNames,
+                    showSolfege = settings.showSolfegeLabels,
                     onNotePressed = { /* Optional: handle virtual key presses */ }
                 )
             }
@@ -1674,6 +1697,7 @@ fun EnhancedPianoLayout(
     currentNotes: List<MidiNote>,
     syncedNotes: Set<Int>,
     showKeyNames: Boolean = false,
+    showSolfege: Boolean = false,
     onNotePressed: (Int) -> Unit
 ) {
     val totalWhiteKeys = (pianoConfig.minNote..pianoConfig.maxNote)
@@ -1701,6 +1725,7 @@ fun EnhancedPianoLayout(
                         isPhysicallyPressed = note in pressedKeys,
                         isHighlighted = currentNotes.any { it.note == note && note in pressedKeys },
                         showKeyName = showKeyNames,
+                        showSolfege = showSolfege,
                         onPressed = onNotePressed
                     )
                 }
@@ -1733,6 +1758,7 @@ fun EnhancedWhiteKey(
     isPhysicallyPressed: Boolean = false,
     isHighlighted: Boolean = false,
     showKeyName: Boolean = false,
+    showSolfege: Boolean = false,
     onPressed: (Int) -> Unit
 ) {
     var isVirtuallyPressed by remember { mutableStateOf(false) }
@@ -1780,9 +1806,30 @@ fun EnhancedWhiteKey(
                     }
                 )
             },
-        contentAlignment = Alignment.BottomCenter
+        contentAlignment = Alignment.Center
     ) {
-        if (showKeyName) {
+        if (showSolfege) {
+            // 唱名标注：中央大号数字 1-7，高/低八度用上方/下方圆点表示
+            val octaveOffset = MusicTheory.octaveOffset(note)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                if (octaveOffset > 0) {
+                    OctaveDots(count = octaveOffset, color = Color.Black.copy(alpha = 0.75f))
+                }
+                Text(
+                    text = MusicTheory.solfege(note),
+                    fontSize = 20.sp,
+                    color = Color.Black.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                if (octaveOffset < 0) {
+                    OctaveDots(count = -octaveOffset, color = Color.Black.copy(alpha = 0.75f))
+                }
+            }
+        } else if (showKeyName) {
             Text(
                 text = getNoteNameForMidiNote(note),
                 fontSize = 10.sp,
@@ -1790,6 +1837,22 @@ fun EnhancedWhiteKey(
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 12.dp)
+            )
+        }
+    }
+}
+
+/** 高/低八度标记圆点 */
+@Composable
+private fun OctaveDots(count: Int, color: Color) {
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        repeat(count) {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 1.dp)
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(color)
             )
         }
     }

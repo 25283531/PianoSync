@@ -7,6 +7,7 @@ data class AppSettings(
     val difficultyLevel: DifficultyLevel = DifficultyLevel.MEDIUM,
     val playbackOffsetMs: Long = 2000L, // Default offset for tablets
     val showKeyNames: Boolean = true, // Show key names on easy mode
+    val showSolfegeLabels: Boolean = true, // 在琴键上显示唱名数字 1-7（儿童识键）
     val metronomeVolume: Float = 1.0f,
     val autoStartRecording: Boolean = true
 )

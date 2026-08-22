@@ -16,6 +16,7 @@ class SettingsRepository(private val context: Context) {
         val DIFFICULTY_LEVEL = stringPreferencesKey("difficulty_level")
         val PLAYBACK_OFFSET_MS = longPreferencesKey("playback_offset_ms")
         val SHOW_KEY_NAMES = booleanPreferencesKey("show_key_names")
+        val SHOW_SOLFEGE_LABELS = booleanPreferencesKey("show_solfege_labels")
         val METRONOME_VOLUME = floatPreferencesKey("metronome_volume")
         val AUTO_START_RECORDING = booleanPreferencesKey("auto_start_recording")
     }
@@ -28,6 +29,7 @@ class SettingsRepository(private val context: Context) {
                 ),
                 playbackOffsetMs = preferences[PreferenceKeys.PLAYBACK_OFFSET_MS] ?: getDefaultOffset(),
                 showKeyNames = preferences[PreferenceKeys.SHOW_KEY_NAMES] ?: true,
+                showSolfegeLabels = preferences[PreferenceKeys.SHOW_SOLFEGE_LABELS] ?: true,
                 metronomeVolume = preferences[PreferenceKeys.METRONOME_VOLUME] ?: 1.0f,
                 autoStartRecording = preferences[PreferenceKeys.AUTO_START_RECORDING] ?: true
             )
@@ -51,6 +53,12 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
+    suspend fun updateShowSolfegeLabels(show: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferenceKeys.SHOW_SOLFEGE_LABELS] = show
+        }
+    }
+
     suspend fun updateMetronomeVolume(volume: Float) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferenceKeys.METRONOME_VOLUME] = volume.coerceIn(0f, 1f)
@@ -68,6 +76,7 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferenceKeys.DIFFICULTY_LEVEL] = settings.difficultyLevel.name
             preferences[PreferenceKeys.PLAYBACK_OFFSET_MS] = settings.playbackOffsetMs
             preferences[PreferenceKeys.SHOW_KEY_NAMES] = settings.showKeyNames
+            preferences[PreferenceKeys.SHOW_SOLFEGE_LABELS] = settings.showSolfegeLabels
             preferences[PreferenceKeys.METRONOME_VOLUME] = settings.metronomeVolume
             preferences[PreferenceKeys.AUTO_START_RECORDING] = settings.autoStartRecording
         }

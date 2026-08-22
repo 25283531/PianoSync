@@ -165,6 +165,9 @@
     <string name="show_key_names">Show Key Names</string>
     <string name="key_names_shown">Key names shown on easy mode</string>
     <string name="key_names_hidden">Key names hidden</string>
+    <string name="show_solfege_labels">Show Solfège (1-7)</string>
+    <string name="solfege_labels_shown">Number labels 1-7 shown on keys</string>
+    <string name="solfege_labels_hidden">Solfège labels hidden</string>
     <string name="playback_sync_offset">Playback Sync Offset</string>
     <string name="sync_offset_desc">%1$dms - Adjust if notes aren\'t synchronized</string>
     <string name="metronome_volume">Metronome Volume</string>
