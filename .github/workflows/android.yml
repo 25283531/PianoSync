@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build APKs
     runs-on: ubuntu-latest
 
     steps:
@@ -28,8 +28,27 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
+      # 若仓库配置了生产签名密钥（secrets.KEYSTORE_BASE64），则解码 keystore；
+      # 未配置时此步骤不做任何事，release 构建将回退为 debug 签名，仍可正常产出可安装 APK。
+      - name: Decode release keystore (if configured)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > app/release.keystore
+            echo "KEYSTORE_FILE=release.keystore" >> "$GITHUB_ENV"
+            echo "Release keystore decoded."
+          else
+            echo "No KEYSTORE_BASE64 secret configured; release will use debug signing."
+          fi
+
+      - name: Build Debug & Release APKs
+        env:
+          KEYSTORE_FILE: ${{ env.KEYSTORE_FILE }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleDebug :app:assembleRelease --stacktrace
 
       - name: Run Unit Tests
         run: ./gradlew :app:testDebugUnitTest --stacktrace
@@ -42,3 +61,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PianoSync-release-${{ github.sha }}
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 30

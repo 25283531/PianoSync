@@ -4,6 +4,17 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Release 签名：优先读取环境变量（CI/生产），否则读取项目根目录的 keystore.properties，
+// 都没有时回退到 debug 密钥，保证 release 构建始终可产出可安装的 APK。
+val keystoreProps = java.util.Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+fun keystoreValue(env: String, prop: String): String? =
+    System.getenv(env) ?: keystoreProps.getProperty(prop)
+
+val releaseStoreFile = keystoreValue("KEYSTORE_FILE", "storeFile")
+
 android {
     namespace = "io.pianosync.midi"
     compileSdk = 35
@@ -18,6 +29,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            if (releaseStoreFile != null) {
+                storeFile = file(releaseStoreFile)
+                storePassword = keystoreValue("KEYSTORE_STORE_PASSWORD", "storePassword")
+                keyAlias = keystoreValue("KEYSTORE_KEY_ALIAS", "keyAlias")
+                keyPassword = keystoreValue("KEYSTORE_KEY_PASSWORD", "keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -25,6 +47,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // 配置了生产密钥则用 release 签名，否则回退 debug 签名以产出可安装 APK
+            signingConfig = if (releaseStoreFile != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {

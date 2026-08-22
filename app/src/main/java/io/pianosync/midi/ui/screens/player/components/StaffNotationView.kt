@@ -3,24 +3,25 @@ package io.pianosync.midi.ui.screens.player.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.pianosync.midi.ui.screens.player.HandMode
 import io.pianosync.midi.ui.screens.player.MidiNote
 import io.pianosync.midi.util.MusicTheory
+import android.graphics.Paint as AndroidPaint
+import android.graphics.Typeface
 
 /**
  * 大谱表（高音 + 低音）五线谱视图。
@@ -47,7 +48,6 @@ fun StaffNotationView(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-    val textMeasurer = rememberTextMeasurer()
 
     val staffSpacingDp = 10.dp
     val noteSpacingDp = 64.dp
@@ -59,6 +59,33 @@ fun StaffNotationView(
     val pastColor = Color(0xFF9A9A9A)
     val lineColor = Color(0xFFD0D0D0)
     val playheadColor = Color(0xFFFFC107)
+
+    // 用原生 Paint 绘制谱号/拍号文字（兼容 Compose UI 1.6，不依赖 1.7 的 drawText）
+    val trebleClefPaint = remember(lineColor) {
+        AndroidPaint().apply {
+            color = lineColor.toArgb()
+            textSize = with(density) { 52.sp.toPx() }
+            isAntiAlias = true
+            typeface = Typeface.DEFAULT
+        }
+    }
+    val bassClefPaint = remember(lineColor) {
+        AndroidPaint().apply {
+            color = lineColor.toArgb()
+            textSize = with(density) { 42.sp.toPx() }
+            isAntiAlias = true
+            typeface = Typeface.DEFAULT
+        }
+    }
+    val timeSigPaint = remember(lineColor) {
+        AndroidPaint().apply {
+            color = lineColor.toArgb()
+            textSize = with(density) { 18.sp.toPx() }
+            isAntiAlias = true
+            typeface = Typeface.DEFAULT_BOLD
+            textAlign = AndroidPaint.Align.CENTER
+        }
+    }
 
     // 根据手模式过滤音符
     val visibleNotes = when (handMode) {
@@ -175,22 +202,17 @@ fun StaffNotationView(
         }
 
         // 谱号 / 拍号（固定左侧）
-        val trebleClef = textMeasurer.measure(
-            AnnotatedString("𝄞"),
-            style = TextStyle(color = lineColor, fontSize = 52.sp, textAlign = TextAlign.Center)
-        )
-        drawText(trebleClef, topLeft = Offset(8f, trebleTopY - 22))
-        val bassClef = textMeasurer.measure(
-            AnnotatedString("𝄢"),
-            style = TextStyle(color = lineColor, fontSize = 42.sp, textAlign = TextAlign.Center)
-        )
-        drawText(bassClef, topLeft = Offset(12f, bassTopY - 6))
-
-        val fourStyle = TextStyle(color = lineColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        drawText(textMeasurer.measure(AnnotatedString("4"), style = fourStyle),
-            topLeft = Offset(leftPad - 24, trebleTopY - 2))
-        drawText(textMeasurer.measure(AnnotatedString("4"), style = fourStyle),
-            topLeft = Offset(leftPad - 24, trebleTopY + 16))
+        drawIntoCanvas { canvas ->
+            val nativeCanvas = canvas.nativeCanvas
+            // 高音谱号 𝄞：基线对齐到高音谱表底部附近
+            nativeCanvas.drawText("𝄞", 8f, trebleBottomY - staffSpacing * 0.3f, trebleClefPaint)
+            // 低音谱号 𝄢：基线对齐到低音谱表底部附近
+            nativeCanvas.drawText("𝄢", 12f, bassBottomY - staffSpacing * 0.3f, bassClefPaint)
+            // 4/4 拍号：上下两个 4
+            val sigX = leftPad - 12f
+            nativeCanvas.drawText("4", sigX, trebleTopY + staffSpacing * 1.3f, timeSigPaint)
+            nativeCanvas.drawText("4", sigX, trebleTopY + staffSpacing * 3.6f, timeSigPaint)
+        }
 
         // 播放指针
         drawLine(playheadColor, Offset(playheadX, trebleTopY - 10), Offset(playheadX, bassBottomY + 10),
