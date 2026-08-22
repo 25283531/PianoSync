@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Name -->
-    <string name="app_name">PianoSync</string>
+    <string name="app_name">学电子琴</string>
 
     <!-- Home Screen -->
     <string name="import_midi_title">导入 MIDI</string>

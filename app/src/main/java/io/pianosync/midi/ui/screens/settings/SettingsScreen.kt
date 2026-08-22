@@ -173,7 +173,7 @@ fun SettingsScreen(
                     title = stringResource(R.string.view_on_github),
                     subtitle = stringResource(R.string.github_desc),
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/clarityuwu/PianoSync/tree/dev-android"))
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/25283531/PianoSync"))
                         context.startActivity(intent)
                     }
                 )

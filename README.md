@@ -40,13 +40,13 @@ PianoSync 是一款通过 USB MIDI 连接电子琴/电钢琴，以"下落音符"
 
 ## 📱 功能截图
 
-| 主菜单 | 设置 | 进度记录 |
-|-----------|---------------|----------------|
-| ![Main Menu](https://i.postimg.cc/yx19pq3B/Screenshot-20250529-170710.png) | ![Practice Mode](https://i.postimg.cc/cCF3VDf3/Screenshot-20250529-170723.png) | ![Song Selection](https://i.postimg.cc/J7xjDhSh/Screenshot-20250529-170749.png) |
+| 主菜单（中文） | 播放界面：五线谱 + 下落音符 + 唱名键位 |
+|-----------|---------------|
+| ![主菜单](docs/images/home.png) | ![播放界面](docs/images/player.png) |
 
-| 无 UI 钢琴界面 | 带 UI 钢琴界面 |
-|----------------|----------|
-| ![Piano Interface](https://i.postimg.cc/Wbfr8HNL/Screenshot-20250529-170814.png) | ![Settings](https://i.postimg.cc/VLNnj8cW/Screenshot-20250529-170819.png) |
+| 设置（中文，含唱名与等待模式） |
+|----------|
+| ![设置](docs/images/settings.png) |
 
 ---
 
