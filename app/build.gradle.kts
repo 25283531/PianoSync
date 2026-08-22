@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,9 +9,11 @@ plugins {
 
 // Release 签名：优先读取环境变量（CI/生产），否则读取项目根目录的 keystore.properties，
 // 都没有时回退到 debug 密钥，保证 release 构建始终可产出可安装的 APK。
-val keystoreProps = java.util.Properties().apply {
+val keystoreProps = Properties().apply {
     val f = rootProject.file("keystore.properties")
-    if (f.exists()) f.inputStream().use { load(it) }
+    if (f.exists()) {
+        FileInputStream(f).use { load(it) }
+    }
 }
 fun keystoreValue(env: String, prop: String): String? =
     System.getenv(env) ?: keystoreProps.getProperty(prop)
