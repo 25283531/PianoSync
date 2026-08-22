@@ -79,7 +79,7 @@ fun StaffNotationDemo() {
             modifier = Modifier.padding(bottom = 6.dp)
         )
         Text(
-            text = "红色 = 当前弹奏音符　玫红 = 右手　蓝色 = 左手　灰色 = 已弹过",
+            text = "红色 = 当前右手　蓝色 = 当前左手　白色 = 未弹奏　浅灰 = 已弹奏",
             style = TextStyle(color = Color(0xFFB0B0B0), fontSize = 11.sp),
             modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -112,15 +112,15 @@ private fun StaffNotationCanvas(
     val textMeasurer = rememberTextMeasurer()
 
     // 尺寸常量（dp -> px 在 draw 时取）
-    val staffSpacingDp = 9.dp
-    val noteSpacingDp = 46.dp       // 一个四分音符的水平距离
-    val playheadRatio = 0.32f       // 播放指针位于屏幕宽度的比例
+    val staffSpacingDp = 10.dp
+    val noteSpacingDp = 64.dp       // 一个四分音符的水平距离
+    val playheadRatio = 0.5f        // 播放指针位于屏幕中央（中间三分之一区域）
     val leftPaddingDp = 70.dp       // 留给谱号/拍号
 
-    val rightHandColor = Color(0xFFE91E63)
-    val leftHandColor = Color(0xFF2196F3)
-    val activeColor = Color(0xFFFF3030)
-    val pastColor = Color(0xFF555555)
+    val futureColor = Color(0xFFFFFFFF)   // 未弹奏：白色
+    val activeRightColor = Color(0xFFFF3030) // 当前右手：红
+    val activeLeftColor = Color(0xFF2196F3)  // 当前左手：蓝
+    val pastColor = Color(0xFF9A9A9A)    // 已弹奏：浅灰（增强对比度）
     val lineColor = Color(0xFFD0D0D0)
     val playheadColor = Color(0xFFFFC107)
 
@@ -185,10 +185,10 @@ private fun StaffNotationCanvas(
             val isPast = note.startTime + note.duration < currentTimeMs
 
             val color = when {
-                isActive -> activeColor
+                isActive && note.isLeftHand -> activeLeftColor
+                isActive -> activeRightColor
                 isPast -> pastColor
-                note.isLeftHand -> leftHandColor
-                else -> rightHandColor
+                else -> futureColor
             }
 
             // 选择高/低音谱表
@@ -212,7 +212,7 @@ private fun StaffNotationCanvas(
                 staffBottom = staffBottom,
                 spacing = staffSpacing,
                 noteHeadW = noteHeadW,
-                color = color.copy(alpha = if (isActive) 1f else 0.7f)
+                color = color.copy(alpha = if (isActive) 1f else 0.85f)
             )
 
             // 符干方向：在中间线及以上符干朝下，否则朝上
@@ -221,11 +221,11 @@ private fun StaffNotationCanvas(
             val stemStartY = if (stemDown) y - noteHeadH / 2 else y + noteHeadH / 2
             val stemEndY = stemStartY + if (stemDown) -stemLength else stemLength
 
-            // 红色发光效果
+            // 当前弹奏音符发光效果
             if (isActive) {
                 drawCircle(
-                    color = activeColor.copy(alpha = 0.35f),
-                    radius = noteHeadW * 0.95f,
+                    color = color.copy(alpha = 0.45f),
+                    radius = noteHeadW * 1.1f,
                     center = Offset(x, y)
                 )
             }
@@ -244,12 +244,16 @@ private fun StaffNotationCanvas(
                     topLeft = Offset(x - noteHeadW / 2, y - noteHeadH / 2),
                     size = Size(noteHeadW, noteHeadH)
                 )
-                // 符头内描边
+                // 符头描边：白色/浅色音符用深色描边增强辨识度，其余用细暗边
+                val outlineColor = when {
+                    color == futureColor -> Color(0xFF1A1A1A)
+                    else -> Color.Black.copy(alpha = 0.3f)
+                }
                 drawOval(
-                    color = Color.Black.copy(alpha = 0.25f),
+                    color = outlineColor,
                     topLeft = Offset(x - noteHeadW / 2, y - noteHeadH / 2),
                     size = Size(noteHeadW, noteHeadH),
-                    style = Stroke(width = 1f)
+                    style = Stroke(width = if (color == futureColor) 1.6f else 1f)
                 )
             }
         }
