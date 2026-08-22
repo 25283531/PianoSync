@@ -112,6 +112,26 @@ fun SettingsScreen(
                         )
                     }
                 )
+
+                // Wait-for-correct-note practice mode
+                SettingsItem(
+                    icon = Icons.Default.Timer,
+                    title = stringResource(R.string.wait_for_correct_note),
+                    subtitle = if (settings.waitForCorrectNote)
+                        stringResource(R.string.wait_mode_on)
+                    else
+                        stringResource(R.string.wait_mode_off),
+                    trailing = {
+                        Switch(
+                            checked = settings.waitForCorrectNote,
+                            onCheckedChange = { enabled ->
+                                scope.launch {
+                                    settingsRepository.updateWaitForCorrectNote(enabled)
+                                }
+                            }
+                        )
+                    }
+                )
             }
 
             // Audio Settings Section

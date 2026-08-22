@@ -8,6 +8,7 @@ data class AppSettings(
     val playbackOffsetMs: Long = 2000L, // Default offset for tablets
     val showKeyNames: Boolean = true, // Show key names on easy mode
     val showSolfegeLabels: Boolean = true, // 在琴键上显示唱名数字 1-7（儿童识键）
+    val waitForCorrectNote: Boolean = false, // 等待模式：未弹对正确音符时暂停乐曲，弹对后继续
     val metronomeVolume: Float = 1.0f,
     val autoStartRecording: Boolean = true
 )

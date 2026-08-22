@@ -168,6 +168,10 @@
     <string name="show_solfege_labels">Show Solfège (1-7)</string>
     <string name="solfege_labels_shown">Number labels 1-7 shown on keys</string>
     <string name="solfege_labels_hidden">Solfège labels hidden</string>
+    <string name="wait_for_correct_note">Wait for Correct Note</string>
+    <string name="wait_mode_on">Pauses until you play the right note</string>
+    <string name="wait_mode_off">Song plays continuously</string>
+    <string name="waiting_for_note">Waiting for the correct note…</string>
     <string name="playback_sync_offset">Playback Sync Offset</string>
     <string name="sync_offset_desc">%1$dms - Adjust if notes aren\'t synchronized</string>
     <string name="metronome_volume">Metronome Volume</string>

@@ -31,6 +31,10 @@ class MidiPlaybackManager(
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
+    // 等待模式：应弹音符未弹对时暂停，弹对后恢复
+    private val _isWaitPaused = MutableStateFlow(false)
+    val isWaitPaused: StateFlow<Boolean> = _isWaitPaused.asStateFlow()
+
     private val _currentTimeMs = MutableStateFlow(0L)
     val currentTimeMs: StateFlow<Long> = _currentTimeMs.asStateFlow()
 
@@ -260,8 +264,49 @@ class MidiPlaybackManager(
     fun pausePlayback() {
         mediaPlayer?.pause()
         _isPlaying.value = false
+        _isWaitPaused.value = false
         playbackJob?.cancel()
         pausedPosition = _currentTimeMs.value
+    }
+
+    /**
+     * 等待模式暂停：冻结播放时钟和音频，但不视为用户手动暂停，也不触发曲终逻辑。
+     * 由 UI 在"应弹音符未弹对"时调用。
+     */
+    fun pauseForWait() {
+        if (_isWaitPaused.value || !_isPlaying.value) return
+        mediaPlayer?.pause()
+        _isPlaying.value = false
+        _isWaitPaused.value = true
+        playbackJob?.cancel()
+        pausedPosition = _currentTimeMs.value
+    }
+
+    /** 等待模式恢复：用户按下正确音符后从冻结位置继续。 */
+    fun resumeFromWait() {
+        if (!_isWaitPaused.value) return
+        _isWaitPaused.value = false
+        mediaPlayer?.apply {
+            seekTo(pausedPosition.toInt())
+            start()
+            _isPlaying.value = true
+
+            val startRealTime = System.currentTimeMillis()
+            playbackJob = coroutineScope.launch {
+                while (isActive && _isPlaying.value) {
+                    val now = System.currentTimeMillis()
+                    val elapsedRealTime = now - startRealTime
+                    _currentTimeMs.value = pausedPosition + (elapsedRealTime * playbackSpeed).toLong()
+
+                    if (_isLoopEnabled.value && _currentTimeMs.value >= _loopEndMs.value) {
+                        seekToLoopStart()
+                        break
+                    }
+
+                    delay(8)
+                }
+            }
+        }
     }
 
     fun resumePlayback(midiFile: MidiFile) {
@@ -292,6 +337,7 @@ class MidiPlaybackManager(
     fun stopPlayback() {
         playbackJob?.cancel()
         _isPlaying.value = false
+        _isWaitPaused.value = false
         playedNotes.clear()
         try {
             mediaPlayer?.stop()

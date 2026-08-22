@@ -134,6 +134,106 @@ fun NoteFallVisualizer(
     val visualizerHeight = (configuration.screenHeightDp).dp
     val playLinePosition = visualizerHeight - noteHeight
     val processedNotes = remember { mutableStateOf<Set<MidiNote>>(emptySet()) }
+    // 等待模式：当前因"应弹但未弹对"而被挂起的音符集合（含和弦中的多个音）
+    val pendingWaitNotes = remember { mutableStateOf<Set<MidiNote>>(emptySet()) }
+    val waitModeEnabled = settings.waitForCorrectNote
+
+    LaunchedEffect(currentTimeMs, pressedKeys, isPlaying) {
+        if (isPlaying) {
+            // Find notes that are currently at the play line (NO offset for input timing)
+            val notesAtPlayLine = notes.filter { note ->
+                val notePlaybackTime = (note.startTime / speedRatio).toLong()
+                val timeDiff = currentTimeMs - notePlaybackTime
+
+                // Simple timing log for notes at play line
+                if (timeDiff in 0..CORRECT_NOTE_WINDOW && note !in processedNotes.value) {
+                    Log.d("NoteTiming", "Note ${getNoteNameForMidiNote(note.note)} - Expected: ${notePlaybackTime}ms, Current: ${currentTimeMs}ms, Diff: ${timeDiff}ms")
+                }
+
+                timeDiff in 0..CORRECT_NOTE_WINDOW && // Within the correct timing window
+                        note !in processedNotes.value && // Not already processed
+                        note !in pendingWaitNotes.value
+            }
+
+            if (waitModeEnabled) {
+                // 等待模式：音符到达播放线时
+                //  - 已按住正确键 -> 判 HIT
+                //  - 未按 -> 挂起该音符，暂停播放，等用户弹对
+                val newlyPending = mutableSetOf<MidiNote>()
+                notesAtPlayLine.forEach { note ->
+                    processedNotes.value = processedNotes.value + note
+                    onNoteProcessed()
+                    if (note.note in pressedKeys) {
+                        correctlyPlayedNotes.value = correctlyPlayedNotes.value + note.note
+                        Log.d("NoteTiming", "✅ ${getNoteNameForMidiNote(note.note)} HIT")
+                    } else {
+                        newlyPending.add(note)
+                        Log.d("NoteTiming", "⏸ ${getNoteNameForMidiNote(note.note)} WAIT")
+                    }
+                }
+                if (newlyPending.isNotEmpty()) {
+                    pendingWaitNotes.value = pendingWaitNotes.value + newlyPending
+                    playbackManager.pauseForWait()
+                }
+            } else {
+                // Check if any of these notes match keys being pressed
+                notesAtPlayLine.forEach { note ->
+                    // Mark this note as processed so we don't count it twice
+                    if (note !in processedNotes.value) {
+                        processedNotes.value = processedNotes.value + note
+                        onNoteProcessed() // Tell parent we processed a note
+
+                        if (note.note in pressedKeys) {
+                            // Note was correctly played!
+                            correctlyPlayedNotes.value = correctlyPlayedNotes.value + note.note
+                            Log.d("NoteTiming", "✅ ${getNoteNameForMidiNote(note.note)} HIT")
+                        } else {
+                            Log.d("NoteTiming", "❌ ${getNoteNameForMidiNote(note.note)} MISSED")
+                        }
+                    }
+                }
+
+                // Also check for notes that have passed the play line without being played (NO offset)
+                val passedNotes = notes.filter { note ->
+                    val notePlaybackTime = (note.startTime / speedRatio).toLong()
+                    val timeDiff = currentTimeMs - notePlaybackTime
+                    timeDiff > CORRECT_NOTE_WINDOW && // Past the correct timing window
+                            note !in processedNotes.value // Not already processed
+                }
+
+                passedNotes.forEach { note ->
+                    // Mark as processed so we don't count it twice
+                    processedNotes.value = processedNotes.value + note
+                    onNoteProcessed() // Tell parent we processed a note
+                }
+            }
+        }
+    }
+
+    // 等待模式：监听按键，用户弹对挂起的音符后恢复播放
+    LaunchedEffect(pressedKeys, pendingWaitNotes.value, isPlaying) {
+        if (waitModeEnabled && pendingWaitNotes.value.isNotEmpty()) {
+            val stillPending = pendingWaitNotes.value.filter { it.note !in pressedKeys }.toSet()
+            val justHit = pendingWaitNotes.value - stillPending
+            if (justHit.isNotEmpty()) {
+                justHit.forEach { note ->
+                    correctlyPlayedNotes.value = correctlyPlayedNotes.value + note.note
+                    Log.d("NoteTiming", "✅ ${getNoteNameForMidiNote(note.note)} HIT (after wait)")
+                }
+                pendingWaitNotes.value = stillPending
+                if (stillPending.isEmpty()) {
+                    playbackManager.resumeFromWait()
+                }
+            }
+        }
+    }
+
+    // 每次重新开始/跳转时清空等待挂起集合
+    LaunchedEffect(isPlaying) {
+        if (isPlaying && pendingWaitNotes.value.isNotEmpty()) {
+            pendingWaitNotes.value = emptySet()
+        }
+    }
 
     // Add manual X offset to align notes with keys
     val xOffset = 10.dp
@@ -199,55 +299,6 @@ fun NoteFallVisualizer(
                     startY <= visualizerHeight.value + 300f &&
                     startY >= -300f &&  // Allow notes to start from further above
                     note.note in pianoConfig.minNote..pianoConfig.maxNote
-        }
-    }
-
-    LaunchedEffect(currentTimeMs, pressedKeys, isPlaying) {
-        if (isPlaying) {
-            // Find notes that are currently at the play line (NO offset for input timing)
-            val notesAtPlayLine = notes.filter { note ->
-                val notePlaybackTime = (note.startTime / speedRatio).toLong()
-                val timeDiff = currentTimeMs - notePlaybackTime
-
-                // Simple timing log for notes at play line
-                if (timeDiff in 0..CORRECT_NOTE_WINDOW && note !in processedNotes.value) {
-                    Log.d("NoteTiming", "Note ${getNoteNameForMidiNote(note.note)} - Expected: ${notePlaybackTime}ms, Current: ${currentTimeMs}ms, Diff: ${timeDiff}ms")
-                }
-
-                timeDiff in 0..CORRECT_NOTE_WINDOW && // Within the correct timing window
-                        note !in processedNotes.value // Not already processed
-            }
-
-            // Check if any of these notes match keys being pressed
-            notesAtPlayLine.forEach { note ->
-                // Mark this note as processed so we don't count it twice
-                if (note !in processedNotes.value) {
-                    processedNotes.value = processedNotes.value + note
-                    onNoteProcessed() // Tell parent we processed a note
-
-                    if (note.note in pressedKeys) {
-                        // Note was correctly played!
-                        correctlyPlayedNotes.value = correctlyPlayedNotes.value + note.note
-                        Log.d("NoteTiming", "✅ ${getNoteNameForMidiNote(note.note)} HIT")
-                    } else {
-                        Log.d("NoteTiming", "❌ ${getNoteNameForMidiNote(note.note)} MISSED")
-                    }
-                }
-            }
-
-            // Also check for notes that have passed the play line without being played (NO offset)
-            val passedNotes = notes.filter { note ->
-                val notePlaybackTime = (note.startTime / speedRatio).toLong()
-                val timeDiff = currentTimeMs - notePlaybackTime
-                timeDiff > CORRECT_NOTE_WINDOW && // Past the correct timing window
-                        note !in processedNotes.value // Not already processed
-            }
-
-            passedNotes.forEach { note ->
-                // Mark as processed so we don't count it twice
-                processedNotes.value = processedNotes.value + note
-                onNoteProcessed() // Tell parent we processed a note
-            }
         }
     }
 
@@ -400,6 +451,7 @@ fun MidiPlayerScreen(
     val playbackManager = remember { MidiPlaybackManager(context, midiConnectionManager) }
     var songDurationMs by remember { mutableStateOf(0L) }
     val isPlaybackActive by playbackManager.isPlaying.collectAsState()
+    val isWaitPaused by playbackManager.isWaitPaused.collectAsState()
     val isLoopEnabled by playbackManager.isLoopEnabled.collectAsState()
     val loopStartMs by playbackManager.loopStartMs.collectAsState()
     val loopEndMs by playbackManager.loopEndMs.collectAsState()
@@ -525,9 +577,10 @@ fun MidiPlayerScreen(
         }
     }
 
-    LaunchedEffect(isPlaybackActive) {
-        if (!isPlaybackActive && hasStartedPlaying && !isPreLoading && !showScoreDialog) {
+    LaunchedEffect(isPlaybackActive, isWaitPaused) {
+        if (!isPlaybackActive && hasStartedPlaying && !isPreLoading && !showScoreDialog && !isWaitPaused) {
             // Only show score dialog if the song actually ended naturally, not if manually paused
+            // or paused by the "wait for correct note" practice mode.
             if (!wasManuallyPaused) {
                 hasStartedPlaying = false
 
@@ -1052,6 +1105,26 @@ fun MidiPlayerScreen(
                         totalNotesPlayed++
                     }
                 )
+
+                // 等待模式提示：未弹对正确音符时在播放线附近显示提示
+                if (isWaitPaused) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 24.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xCCFF3030))
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.waiting_for_note),
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
 
                 if (showScoreDialog) {
                     val sessionDurationMs = System.currentTimeMillis() - sessionStartTimeMs
@@ -1806,26 +1879,32 @@ fun EnhancedWhiteKey(
                     }
                 )
             },
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.BottomCenter
     ) {
         if (showSolfege) {
-            // 唱名标注：中央大号数字 1-7，高/低八度用上方/下方圆点表示
+            // 唱名标注：数字靠下显示，高/低八度圆点纵向排列于数字上下方
             val octaveOffset = MusicTheory.octaveOffset(note)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Bottom,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp)
             ) {
                 if (octaveOffset > 0) {
                     OctaveDots(count = octaveOffset, color = Color.Black.copy(alpha = 0.75f))
+                    Spacer(modifier = Modifier.height(2.dp))
                 }
                 Text(
                     text = MusicTheory.solfege(note),
-                    fontSize = 20.sp,
+                    fontSize = 16.sp,
                     color = Color.Black.copy(alpha = 0.8f),
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
                 )
                 if (octaveOffset < 0) {
+                    Spacer(modifier = Modifier.height(2.dp))
                     OctaveDots(count = -octaveOffset, color = Color.Black.copy(alpha = 0.75f))
                 }
             }
@@ -1842,15 +1921,17 @@ fun EnhancedWhiteKey(
     }
 }
 
-/** 高/低八度标记圆点 */
+/** 高/低八度标记圆点：简谱中加点为纵向单列排列 */
 @Composable
 private fun OctaveDots(count: Int, color: Color) {
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(1.dp)
+    ) {
         repeat(count) {
             Box(
                 modifier = Modifier
-                    .padding(vertical = 1.dp)
-                    .size(4.dp)
+                    .size(3.5.dp)
                     .clip(CircleShape)
                     .background(color)
             )

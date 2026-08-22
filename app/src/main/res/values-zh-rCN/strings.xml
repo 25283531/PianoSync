@@ -168,6 +168,10 @@
     <string name="show_solfege_labels">显示唱名（1-7）</string>
     <string name="solfege_labels_shown">琴键上显示数字 1-7</string>
     <string name="solfege_labels_hidden">已隐藏唱名标注</string>
+    <string name="wait_for_correct_note">等待正确音符</string>
+    <string name="wait_mode_on">未弹对正确音符时暂停，弹对后继续</string>
+    <string name="wait_mode_off">乐曲连续播放</string>
+    <string name="waiting_for_note">请弹奏正确的音符…</string>
     <string name="playback_sync_offset">播放同步偏移</string>
     <string name="sync_offset_desc">%1$d 毫秒 — 如果音符不同步可调整此项</string>
     <string name="metronome_volume">节拍器音量</string>
