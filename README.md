@@ -1,129 +1,113 @@
-# Contributing to PianoSync
-## Welcome Contributors! 🎹🎶
-First off, thank you for considering contributing to PianoSync. It's people like you that make PianoSync such a great tool for music learners and piano enthusiasts.
+# PianoSync（儿童学琴增强版）
 
-## Get the App 📲
-PianoSync is available on Google Play! Download it now to see what you'll be contributing to:
+PianoSync 是一款通过 USB MIDI 连接电子琴/电钢琴，以"下落音符"方式跟弹练习的 Android 应用。
 
-[![Get it on Google Play](https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png)](https://play.google.com/store/apps/details?id=io.scoreflow.app&referrer=utm_source%3Dgithub%26utm_medium%3Dreadme%26utm_campaign%3Dcontributing)
+> 本项目基于 [https://github.com/clquwu/PianoSync](https://github.com/clquwu/PianoSync) 进行二次开发与汉化，面向儿童学琴场景增加了唱名标注、五线谱视窗和"等待正确音符"等功能，并提供简体中文界面。
 
-## Screenshots 📱
-Get a feel for the app and what you'll be contributing to:
+---
 
-| Main Menu | Settings | Progress Tracking |
+## ✨ 本分支新增内容
+
+### 1. 琴键唱名标注（1 2 3 4 5 6 7）
+- 在每个白键上显示大号唱名数字（C 大调：C=1、D=2 … B=7），大幅降低儿童识键门槛。
+- 高/低八度用数字上/下方的**纵向圆点**表示，符合简谱规范。
+- 可在「设置 → 显示唱名（1-7）」中开关，设置自动持久化。
+- 相关实现：`MusicTheory.kt`、`EnhancedWhiteKey`、`OctaveDots`。
+
+### 2. 顶部五线谱识谱视窗
+- 播放页顶部新增大谱表（高音谱号 + 低音谱号），音符随乐曲横向滚动，将"游戏下落"与"专业识谱"结合。
+- 当前正在弹奏的音符**高亮显示**：右手红色、左手蓝色，并带发光效果；未弹音符为白色，已弹音符为灰色。
+- 播放指针位于屏幕中央，滚动速度与乐曲 BPM 同步，形成「视谱 → 下落方块 → 数字键位 → 真实电子琴」的学习闭环。
+- 纯 Jetpack Compose Canvas 自绘，无额外 WebView/JS 依赖，兼容 Compose 1.6。
+- 相关实现：`StaffNotationView.kt`、`MusicTheory.kt`。
+
+### 3. "等待正确音符"练习模式
+- 开启后，乐曲播放到应弹音符时，若用户没有弹对，**乐曲和乐谱会自动暂停**；弹对正确音符（和弦需全部按对）后才继续播放。
+- 等待时在播放线附近显示红色提示「请弹奏正确的音符…」。
+- 特别适合儿童逐音跟练，不再因手忙脚乱而错过整段。
+- 可在「设置 → 等待正确音符」中开关，默认关闭。
+- 相关实现：`MidiPlaybackManager.pauseForWait()/resumeFromWait()`、`NoteFallVisualizer` 判定逻辑。
+
+### 4. 简体中文化
+- 新增 `values-zh-rCN/strings.xml`，覆盖全部界面文案，音乐术语采用惯用译法。
+- 应用会**自动跟随系统语言**：简体中文系统显示中文，其他语言回退英文（原有法语资源保留）。
+
+### 5. CI / 构建
+- 新增 GitHub Actions 工作流 `.github/workflows/android.yml`，每次推送/PR 自动编译 Debug 与 Release APK 并作为 Artifact 上传。
+- Release 签名支持通过环境变量或 `keystore.properties` 配置；未配置时自动回退 Debug 签名，保证始终可产出可安装包。
+
+---
+
+## 📱 功能截图
+
+| 主菜单 | 设置 | 进度记录 |
 |-----------|---------------|----------------|
 | ![Main Menu](https://i.postimg.cc/yx19pq3B/Screenshot-20250529-170710.png) | ![Practice Mode](https://i.postimg.cc/cCF3VDf3/Screenshot-20250529-170723.png) | ![Song Selection](https://i.postimg.cc/J7xjDhSh/Screenshot-20250529-170749.png) |
 
-| Piano Interface Without Ui | Piano Interface With Ui |
+| 无 UI 钢琴界面 | 带 UI 钢琴界面 |
 |----------------|----------|
 | ![Piano Interface](https://i.postimg.cc/Wbfr8HNL/Screenshot-20250529-170814.png) | ![Settings](https://i.postimg.cc/VLNnj8cW/Screenshot-20250529-170819.png) |
 
-## Code of Conduct
-Please note that this project is released with a Contributor Code of Conduct. By participating in this project, you agree to abide by its terms.
+---
 
-## How Can I Contribute?
-### Reporting Bugs 🐞
-- **Ensure the bug has not already been reported** by searching existing Issues.
-- If you can't find an open issue addressing the problem, open a new one.
-- Be sure to include a **clear title and description**, as much relevant information as possible, and a **code sample** or steps to reproduce the issue.
+## 🛠️ 开发与构建
 
-### Suggesting Enhancements 💡
-- Open an issue with a clear title and description of your suggested enhancement.
-- Provide context about why this feature would be useful.
-- If possible, include mockups or design sketches.
-
-### Development Process 🛠️
-#### Getting Started
-1. Fork the repository
-2. Create a new branch for your feature or bugfix
-   - Use a clear and descriptive branch name
-   - Example: `feature/add-difficulty-levels` or `bugfix/midi-playback-sync`
-3. Make your changes
-4. Test your changes
-5. Submit a Pull Request
-
-#### Pull Request Guidelines
-- Fill out the PR template completely
-- Include screenshots or GIFs if your changes affect the UI
-- Ensure your code follows the project's coding standards
-- Update documentation accordingly
-
-### Development Setup 💻
-#### Prerequisites
+### 环境要求
 - Android Studio
-- JDK 11 or later
-- Kotlin plugin
+- JDK 17
+- Kotlin（版本以 `gradle/libs.versions.toml` 为准）
 
-#### Local Development
-1. Clone your forked repository
-2. Open the project in Android Studio
-3. Sync Gradle files
-4. Run the app
-   - Use Android Studio's run configuration
+### 本地运行
+1. Clone 仓库并用 Android Studio 打开；
+2. 等待 Gradle Sync 完成；
+3. 连接支持 MIDI 的电子琴（或使用屏幕虚拟键盘），点击 Run。
 
-### Contribution Areas We Need Help With 🤝
-1. **Design**
-   - Logo design
-   - UI/UX improvements
-   - App icon designs
+### 命令行构建
+```bash
+# Debug APK
+./gradlew :app:assembleDebug
+# Release APK（未配置签名时使用 debug 密钥）
+./gradlew :app:assembleRelease
+```
+产物位于 `app/build/outputs/apk/`。
 
-2. **Features**
-   - Difficulty level implementation
-   - Visual cues for note hitting accuracy
-   - Physical piano connection improvements
-
-3. **Testing**
-   - Comprehensive app testing
-   - MIDI file compatibility testing
-   - Performance optimization
-
-### Coding Standards 📏
-- Follow Kotlin best practices
-- Use meaningful variable and function names
-- Write clear, concise comments
-- Maintain consistent code formatting
-- Use Android Studio's built-in code formatter
-- Follow [Kotlin Coding Conventions](https://kotlinlang.org/docs/coding-conventions.html)
-
-#### Example Kotlin Style Guide Highlights:
-- Use camelCase for names
-- Use meaningful and intention-revealing names
-- Prefer immutability (val over var)
-- Use type inference where possible
-
-### Feature Request Process 🚀
-1. Open an issue describing the feature
-2. Discuss the feature with maintainers
-3. Once approved, assign yourself or wait for assignment
-4. Implement the feature
-5. Write unit and instrumentation tests
-6. Update documentation
-7. Submit a pull request
-
-### Dependency Management
-- Use Gradle for dependency management
-- Keep dependencies up to date
-- Prefer the latest stable versions of libraries
-
-### Communication Channels 💬
-- Email: raphaelboullaylefur@proton.me
-- Discord: clarityhs
-
-### Special Call-out for Designers 🎨
-We are actively seeking designers to help improve our app's visual experience! If you're interested in:
-- Creating a logo
-- Designing UI mockups
-- Improving app aesthetics
-
-Please reach out directly via email or Discord.
-
-## Build Process
-### Debug Build
-- Use Android Studio's "Run" configuration
-- Select debug variant
-
-## Thank You! 🙏
-Your contributions make open-source communities amazing. We appreciate every contribution, no matter how small!
+### Release 正式签名（可选）
+在项目根目录创建 `keystore.properties`（已被 `.gitignore` 忽略）：
+```properties
+storeFile=../your-release.keystore
+storePassword=你的密钥库密码
+keyAlias=你的别名
+keyPassword=你的密钥密码
+```
+或在 CI 中配置 `KEYSTORE_BASE64`、`KEYSTORE_STORE_PASSWORD`、`KEYSTORE_KEY_ALIAS`、`KEYSTORE_KEY_PASSWORD` Secrets。
 
 ---
-**Note:** This project is in active development. Guidelines may change, so always check the latest version.
+
+## 🤝 参与贡献
+
+感谢你考虑为 PianoSync 做贡献！
+
+### 提交 Issue / Bug 报告
+- 先搜索是否已有相同问题；
+- 提供清晰标题、复现步骤、设备与 MIDI 设备型号、相关日志。
+
+### 开发流程
+1. Fork 仓库；
+2. 基于 `dev-android`（或 `main`）创建特性分支，例如 `feature/add-xxx` 或 `bugfix/fix-xxx`；
+3. 完成改动并自测；
+4. 提交 Pull Request，说明改动内容与动机，UI 改动请附上截图。
+
+### 代码规范
+- 遵循 Kotlin 官方编码规范与项目现有风格；
+- 使用有意义的命名，保持简洁；
+- 优先复用现有模块与组件，保持架构一致。
+
+### 沟通方式
+- 上游邮箱：raphaelboullaylefur@proton.me
+- 上游 Discord：clarityhs
+
+---
+
+## 📄 说明
+
+本项目在原项目基础上进行二次开发，遵循其开源协议。原项目版权归原作者所有，本分支的增强功能版权归本分支贡献者所有。

@@ -138,6 +138,10 @@ fun NoteFallVisualizer(
     val pendingWaitNotes = remember { mutableStateOf<Set<MidiNote>>(emptySet()) }
     val waitModeEnabled = settings.waitForCorrectNote
 
+    // Get original BPM from playback manager
+    val originalBpm = playbackManager.getOriginalBpm()
+    val speedRatio = if (originalBpm > 0) bpm.toFloat() / originalBpm.toFloat() else 1f
+
     LaunchedEffect(currentTimeMs, pressedKeys, isPlaying) {
         if (isPlaying) {
             // Find notes that are currently at the play line (NO offset for input timing)
@@ -241,10 +245,6 @@ fun NoteFallVisualizer(
     val whiteKeyWidth = pianoConfig.keyWidth
     val whiteNoteWidth = whiteKeyWidth * 0.6f
     val blackNoteWidth = whiteKeyWidth * 0.4f
-
-    // Get original BPM from playback manager
-    val originalBpm = playbackManager.getOriginalBpm()
-    val speedRatio = if (originalBpm > 0) bpm.toFloat() / originalBpm.toFloat() else 1f
 
     // This function positions notes vertically based on their time
     fun timeToYPosition(noteTime: Long): Float {
